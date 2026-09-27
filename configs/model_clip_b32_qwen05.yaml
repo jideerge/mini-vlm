@@ -1,0 +1,129 @@
+# ============================================================
+# Mini-VLM 模型配置：CLIP ViT-B/32 + Qwen2.5-0.5B-Instruct
+# 所有数字均为本机实测值
+#   -> notes/week1_vlm_notes.md、notes/week2_vision_encoder_notes.md
+# ============================================================
+
+experiment_name: clip_b32_qwen05
+
+# ---------- 视觉塔（冻结） ----------
+vision:
+  name_or_path: checkpoints/pretrained/clip-vit-base-patch32
+  freeze: true
+  # 实测：CLIPVisionModel.last_hidden_state = [B, 50, 768]，第 0 个是 CLS
+  # 丢弃 CLS 后剩 49 个 patch token
+  drop_cls: true
+  image_size: 224          # config.image_size
+  patch_size: 32           # config.patch_size
+  num_patches: 49          # (224/32)^2 = 49
+  num_tokens: 49           # 送入 Projector 的 token 数（= num_patches，已丢 CLS）
+  hidden_size: 768         # Dv
+  num_layers: 12
+  num_params: 87456000     # 实测，全部冻结
+
+# ---------- 连接器（本项目唯一可训练的核心模块） ----------
+projector:
+  type: mlp                # linear | mlp
+  in_dim: 768              # 必须 = vision.hidden_size
+  out_dim: 896             # 必须 = llm.hidden_size（硬约束，写错直接报错）
+  hidden_dim: 2048
+  depth: 2                 # 0=Linear, 2=2层MLP, 3=3层MLP
+  dropout: 0.0
+  # 实测参数量（`python models/projector.py` 可复现）
+  num_params:
+    linear: 689024
+    mlp2: 3410816
+    mlp3: 7607168
+
+# ---------- 语言模型 ----------
+llm:
+  name_or_path: checkpoints/pretrained/qwen2.5-0.5b-instruct
+  hidden_size: 896         # Dl，必须 = projector.out_dim
+  num_layers: 24
+  num_attention_heads: 14
+  num_key_value_heads: 2
+  vocab_size: 151643       # base 词表
+  tokenizer_len: 151665    # 含 special token
+  embedding_rows: 151936   # 权重表行数（比 tokenizer 多 271 行，勿新增 token）
+  tie_word_embeddings: true
+  max_position_embeddings: 32768
+  bos_token_id: null       # Qwen2 无 BOS，拼接时必须自己控制
+  eos_token_id: 151643
+  pad_token_id: 151643     # 无 pad，用 eos 充当
+  image_placeholder: "<|image_pad|>"
+  image_placeholder_id: 151655   # 实测已在词表中且是单一 token
+  # 注意：不要调用 add_special_tokens / resize_token_embeddings
+
+# ---------- 训练策略 ----------
+#   projector_only : 只训 Projector（Experiment A，已完成）
+#   lora           : Projector + LLM 的 LoRA 适配器，bf16（Experiment B）
+#   qlora          : 同 lora，但基础模型 4-bit 量化（Experiment C，需 bitsandbytes）
+#
+# ⚠️ freeze_llm 的含义随策略变化：
+#   projector_only -> true  = 完全不训练 LLM
+#   lora / qlora   -> 忽略此项：peft 注入 LoRA 时会自动冻结基础权重，
+#                     只让 lora_A / lora_B 可训练。**绝不能**在注入后再调
+#                     requires_grad_(False)，那会把 LoRA 也一起冻掉。
+training:
+  strategy: projector_only        # projector_only | lora | qlora
+  freeze_vision: true
+  freeze_llm: true
+  projector_lr: 1.0e-3            # Projector 随机初始化，lr 要比 LoRA 大一个量级
+  lora_lr: 2.0e-4                 # 仅 lora/qlora 策略使用
+  batch_size: 4
+  grad_accum_steps: 8             # 等效 batch 32
+  num_epochs: 2
+  warmup_steps: 100
+  weight_decay: 0.0               # Projector 不加 weight decay
+  grad_clip: 1.0
+  precision: bf16                 # 4050 支持 bf16
+  max_seq_len: 768                # 49 视觉 + 文本，超长截断
+  seed: 42
+  save_steps: 500
+  logging_steps: 10
+  gradient_checkpointing: false   # LoRA 若显存不够可打开（换时间省显存）
+  max_train_steps: 1200           # 与 EXP-002 对齐，保证可比
+
+# ---------- LoRA（Week 6 / Experiment B） ----------
+# 参数量估算（r=16，只做 attention 的 4 个投影）：
+#   Qwen2.5-0.5B: hidden=896, kv_heads=2 -> kv_dim=128
+#   q_proj: 896x896, k_proj: 896x128, v_proj: 896x128, o_proj: 896x896
+#   每层 LoRA 参数 = r*(896+896) + r*(896+128)*2 + r*(896+896) ≈ 16*5632 = 90,112
+#   24 层合计 ≈ 2.16M（实际值以训练日志为准）
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+  bias: none
+
+# ---------- QLoRA（Week 6 / Experiment C；需 bitsandbytes） ----------
+# ⚠️ Windows 原生环境下 bitsandbytes 通常装不上。
+#    若失败，代码会给出明确提示；可选择：
+#      1) WSL2 + Linux  2) 退回纯 bf16 LoRA  3) 云端 Linux 实例
+qlora:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_compute_dtype: bfloat16
+  bnb_4bit_use_double_quant: true
+
+# ---------- 数据 ----------
+data:
+  # Week 2 实测硬约束：CLIPProcessor 做「最短边缩放 + 中心裁剪」，
+  # VOC 的 4:3 图左右各丢约 12.5%，靠边目标会直接消失。
+  # 因此 Dataset 必须先把图 pad 成正方形再交给 processor。
+  pad_to_square: true
+  pad_fill: [255, 255, 255]
+  num_image_token: 49             # 必须 = vision.num_tokens
+  voc_root: "D:\\学习\\深度学习\\dl_project\\7.YOLOv1\\data\\20260804-140453"
+  feature_cache:
+    dir: data/processed/features_w2
+    # 缓存内容：patch_features[49,768] / cls_feature[768] / image_embeds[512]
+    # VLM 训练用 patch_features（投影前），零样本/检索才用 image_embeds（投影后）
+    use_for_training: true
+
+# ---------- 一致性自检（脚本会读这些字段做断言） ----------
+constraints:
+  assert_projector_in_dim_equals_vision_hidden: true
+  assert_projector_out_dim_equals_llm_hidden: true
+  assert_num_image_token_equals_vision_num_tokens: true

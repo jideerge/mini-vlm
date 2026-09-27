@@ -1,0 +1,8 @@
+python      : 3.12.4 Windows-11-10.0.26200-SP0
+torch       : 2.6.0+cu124
+cuda avail  : True
+gpu         : NVIDIA GeForce RTX 4050 Laptop GPU
+vram (GB)   : 6.0
+bf16 support: True
+transformers: 5.17.0
+peft        : 0.20.0

@@ -1,0 +1,203 @@
+{
+  "A": {
+    "single_image_ms": 37.18533750009101,
+    "params": 87456000,
+    "preprocess": {
+      "verdict": "center-crop",
+      "err_stretch": 149.66666666666666,
+      "err_crop": 0.3333333333333333,
+      "probes": [
+        {
+          "split": 0.1,
+          "boundary_col": NaN,
+          "pred_stretch": 22.400000000000002,
+          "pred_crop": -67.2
+        },
+        {
+          "split": 0.5,
+          "boundary_col": 111.0,
+          "pred_stretch": 112.0,
+          "pred_crop": 112.0
+        },
+        {
+          "split": 0.9,
+          "boundary_col": NaN,
+          "pred_stretch": 201.6,
+          "pred_crop": 291.2
+        }
+      ],
+      "do_center_crop": true,
+      "size": "SizeDict(height=None, width=None, longest_edge=None, shortest_edge=224, max_height=None, max_width=None, min_pixels=None, max_pixels=None)",
+      "crop_size": "SizeDict(height=224, width=224, longest_edge=None, shortest_edge=None, max_height=None, max_width=None, min_pixels=None, max_pixels=None)"
+    }
+  },
+  "B": {
+    "best_layer": 11,
+    "most_change_layer": 2
+  },
+  "C": {
+    "top1": 0.865,
+    "top5": 0.975,
+    "n": 200,
+    "total_s": 1.6273849999997765,
+    "per_class": {
+      "aeroplane": {
+        "n": 10,
+        "top1": 0.9
+      },
+      "bicycle": {
+        "n": 10,
+        "top1": 0.9
+      },
+      "bird": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "boat": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "bottle": {
+        "n": 10,
+        "top1": 0.7
+      },
+      "bus": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "car": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "cat": {
+        "n": 10,
+        "top1": 0.9
+      },
+      "chair": {
+        "n": 10,
+        "top1": 0.4
+      },
+      "cow": {
+        "n": 10,
+        "top1": 0.8
+      },
+      "diningtable": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "dog": {
+        "n": 10,
+        "top1": 0.8
+      },
+      "horse": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "motorbike": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "person": {
+        "n": 10,
+        "top1": 0.8
+      },
+      "pottedplant": {
+        "n": 10,
+        "top1": 0.7
+      },
+      "sheep": {
+        "n": 10,
+        "top1": 0.9
+      },
+      "sofa": {
+        "n": 10,
+        "top1": 0.7
+      },
+      "train": {
+        "n": 10,
+        "top1": 1.0
+      },
+      "tvmonitor": {
+        "n": 10,
+        "top1": 0.8
+      }
+    },
+    "majority": 0.05,
+    "margin": 0.042067889124155045,
+    "top1_cos": 0.27617281675338745,
+    "logit_scale": 100.0
+  },
+  "K": {
+    "knn_acc": 0.815,
+    "knn_cv_mean": 0.8150000000000001,
+    "knn_cv_std": 0.028939592256975562,
+    "n": 400,
+    "n_splits": 5,
+    "chance": 0.05
+  },
+  "D": {
+    "rows": [
+      [
+        "原图（baseline）",
+        1.0,
+        1.0,
+        0.0
+      ],
+      [
+        "水平翻转",
+        0.9861240983009338,
+        0.7217274308204651,
+        0.15817362070083618
+      ],
+      [
+        "轻微颜色抖动",
+        0.9883010983467102,
+        0.9887077212333679,
+        0.13743755221366882
+      ],
+      [
+        "中心裁掉 20%",
+        0.9497907757759094,
+        0.8001003861427307,
+        0.30848267674446106
+      ],
+      [
+        "中心裁掉 40%",
+        0.9085007309913635,
+        0.7112645506858826,
+        0.41938504576683044
+      ],
+      [
+        "缩放到 50% 再回原尺寸",
+        0.9526506066322327,
+        0.9638584852218628,
+        0.30249783396720886
+      ],
+      [
+        "旋转 10 度",
+        0.9330082535743713,
+        0.8071619272232056,
+        0.35924971103668213
+      ]
+    ],
+    "n_images": 200
+  },
+  "E": {
+    "cache": {
+      "out_dir": "D:\\学习\\深度学习\\dl_project\\9.VLM\\data\\processed\\features_w2",
+      "num_images": 1000,
+      "shards": [
+        "shard_0000.pt"
+      ],
+      "total_s": 8.477127900000596,
+      "images_per_s": 117.96448181464027,
+      "per_image_ms_batched": 2.5108437999979287,
+      "disk_mb": 74.21875,
+      "disk_kb_per_image": 76.0,
+      "device": "cuda",
+      "index_path": "D:\\学习\\深度学习\\dl_project\\9.VLM\\data\\processed\\features_w2\\index.json"
+    },
+    "latency_ms_bs1": 12.14463499991325,
+    "peak_mb": 685.427734375
+  }
+}

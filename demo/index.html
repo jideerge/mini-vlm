@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Mini-VLM · 本地图片问答演示</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="brand" aria-label="Mini-VLM 本地演示">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span>Mini-VLM</span>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-subtitle">本地图片问答</span>
+        </div>
+        <span class="header-pill"><span class="status-dot" aria-hidden="true"></span> 本地运行 · 无需云 GPU</span>
+      </header>
+
+      <main>
+        <section class="intro" aria-labelledby="page-title">
+          <div class="intro-copy">
+            <span class="eyebrow">PROJECT DEMO / V0.1</span>
+            <h1 id="page-title">上传图片，<br /><em>问一个具体的问题。</em></h1>
+            <p>选择任务和 VOC 类别，让模型生成一条简短回答。图片只提交给这台电脑上的本地服务。</p>
+          </div>
+          <div class="intro-ornament" aria-hidden="true">
+            <div class="ornament-frame"><div class="ornament-focus"></div><div class="ornament-caption">IMAGE → QUESTION → ANSWER</div></div>
+          </div>
+        </section>
+
+        <section class="disclosure" aria-label="实验限制">
+          <div class="disclosure-symbol" aria-hidden="true">!</div>
+          <div>
+            <strong>实验性结果</strong>
+            <p>空间位置暂不支持可靠判断；多个同类物体计数容易出错。旧验证集 <b>324/399</b> 仅是开发阶段成绩，独立 <b>400</b> 题尚未评测，不能把它当作本演示对任意照片的准确率。</p>
+          </div>
+        </section>
+
+        <div class="workspace-grid">
+          <section class="panel input-panel" aria-labelledby="input-title">
+            <div class="panel-heading">
+              <span class="step-index">01</span>
+              <div><h2 id="input-title">准备图片</h2><p>从本机选择一张照片</p></div>
+            </div>
+
+            <input id="image-input" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="image-help" />
+            <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="上传图片，也可将图片拖放到此处">
+              <div id="empty-upload" class="empty-upload">
+                <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 32V12m0 0-7 7m7-7 7 7M10 34v3a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <strong>点击选择，或拖入图片</strong>
+                <span>支持 JPG、PNG、WebP · 最大 8 MB</span>
+              </div>
+              <img id="image-preview" class="image-preview" alt="已上传图片预览" hidden />
+            </div>
+            <div class="image-meta"><span id="image-name">尚未选择图片</span><span id="image-size"></span></div>
+            <p id="image-help" class="field-help">演示仅处理 VOC 训练涉及的 20 类物体。范围外或复杂场景可能得到错误答案。</p>
+
+            <div class="section-rule"></div>
+
+            <div class="panel-heading compact">
+              <span class="step-index">02</span>
+              <div><h2 id="task-title">选择问题</h2><p>每次只询问一个任务</p></div>
+            </div>
+            <fieldset class="task-grid" aria-labelledby="task-title">
+              <legend class="visually-hidden">问题类型</legend>
+              <label class="task-option"><input type="radio" name="task" value="existence" checked /><span class="task-card"><span class="task-number">A</span><strong>是否存在</strong><small>有没有指定物体</small></span></label>
+              <label class="task-option"><input type="radio" name="task" value="counting" /><span class="task-card"><span class="task-number">B</span><strong>数量</strong><small>有几个指定物体</small></span></label>
+              <label class="task-option"><input type="radio" name="task" value="attribute" /><span class="task-card"><span class="task-number">C</span><strong>属性</strong><small>主要物体类别</small></span></label>
+              <label class="task-option"><input type="radio" name="task" value="listing" /><span class="task-card"><span class="task-number">D</span><strong>物体列举</strong><small>图中有哪些类别</small></span></label>
+              <label class="task-option spatial-option"><input type="radio" name="task" value="spatial" /><span class="task-card"><span class="task-number">E</span><strong>空间位置</strong><small>左边还是右边 · 不可靠</small></span></label>
+            </fieldset>
+
+            <div id="category-fields" class="category-fields">
+              <div id="category-field" class="field">
+                <label for="category">目标类别</label>
+                <select id="category" required><option value="">正在读取 VOC 类别…</option></select>
+              </div>
+              <div id="other-category-field" class="field" hidden>
+                <label for="other-category">参照类别</label>
+                <select id="other-category"><option value="">正在读取 VOC 类别…</option></select>
+              </div>
+            </div>
+            <div id="task-note" class="task-note" role="note">请选择图片中想确认的 VOC 类别。</div>
+
+            <button id="predict-button" class="predict-button" type="button" disabled><span>生成回答</span><span aria-hidden="true">↗</span></button>
+            <p id="service-status" class="service-status" role="status">正在连接本地服务…</p>
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+          </section>
+
+          <section class="panel result-panel" aria-labelledby="result-title">
+            <div class="panel-heading">
+              <span class="step-index">03</span>
+              <div><h2 id="result-title">查看回答</h2><p>模型输出，请结合原图自行核对</p></div>
+            </div>
+            <div id="result-empty" class="result-empty" aria-hidden="true">
+              <div class="result-glyph"><span>?</span></div>
+              <strong>回答将在这里出现</strong>
+              <p>上传图片并选好问题后，点击“生成回答”。</p>
+            </div>
+            <div id="result-content" class="result-content" aria-live="polite" hidden>
+              <span class="result-kicker">MODEL RESPONSE · EXPERIMENTAL</span>
+              <div class="result-block"><span class="result-label">提问</span><p id="result-question"></p></div>
+              <div class="result-block answer-block"><span class="result-label">模型回答</span><p id="result-answer"></p></div>
+              <p id="result-warning" class="result-warning" hidden></p>
+            </div>
+            <div class="result-footer"><span class="footer-mark" aria-hidden="true">✳</span> 结果仅供项目演示，不应据此作可靠判断。</div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="site-footer"><span>Mini-VLM · 本地实验演示</span><span>VOC 20 类范围 · 独立评测尚未完成</span></footer>
+    </div>
+  </body>
+</html>

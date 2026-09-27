@@ -1,0 +1,46 @@
+# B/16 视觉 token 消融：与 B/32 清理版保持相同的 Projector、LLM 和训练策略。
+# 官方权重：openai/clip-vit-base-patch16
+# 固定版本：57c216476eefef5ab752ec549e440a49ae4ae5f3
+# 权重文件 pytorch_model.bin SHA-256：
+# ec89c7b09c749a60aae3c9cd910516f24b58214a7df060b48962d14c469cfbf0
+experiment_name: clip_b16_qwen05_spatial_clean
+
+vision:
+  name_or_path: checkpoints/pretrained/clip-vit-base-patch16
+  freeze: true
+  drop_cls: true
+  image_size: 224
+  patch_size: 16
+  hidden_size: 768
+  num_patches: 196
+  num_tokens: 196           # CLIP 输出 197，丢弃 CLS 后为 14×14 个 patch
+  num_layers: 12
+  num_params: 85799424     # 本地离线加载实测
+
+projector:
+  type: mlp
+  in_dim: 768
+  out_dim: 896
+  hidden_dim: 2048
+  depth: 2
+  dropout: 0.0
+
+llm:
+  name_or_path: checkpoints/pretrained/qwen2.5-0.5b-instruct
+  hidden_size: 896
+
+training:
+  strategy: projector_only
+  freeze_vision: true
+  freeze_llm: true
+  projector_lr: 1.0e-3
+  batch_size: 4
+  grad_accum_steps: 8
+  max_seq_len: 768
+  seed: 42
+  max_train_steps: 1200
+
+data:
+  pad_to_square: true
+  pad_fill: [255, 255, 255]
+  num_image_token: 196
