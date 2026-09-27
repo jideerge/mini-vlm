@@ -33,13 +33,21 @@ FILES = {
 
 def build(destination: Path = DEFAULT_DEST) -> Path:
     destination = destination.resolve()
+    dist_root = (ROOT / "dist").resolve()
+    if destination == dist_root or dist_root not in destination.parents:
+        raise ValueError(f"Bundle destination must be below {dist_root}")
     if destination.exists():
-        raise FileExistsError(f"Bundle already exists; choose an empty path: {destination}")
+        if not destination.is_dir():
+            raise FileExistsError(f"Bundle path is not a directory: {destination}")
+        expected = set(FILES.values())
+        actual = {path.relative_to(destination).as_posix()
+                  for path in destination.rglob("*") if path.is_file()}
+        unexpected = actual - expected
+        if unexpected:
+            raise FileExistsError(f"Bundle contains unexpected files: {sorted(unexpected)}")
     checkpoint = ROOT / "demo/assets/checkpoint_best.pt"
     if _sha256(checkpoint) != CHECKPOINT_SHA256:
         raise ValueError("Bundled Projector checkpoint SHA-256 mismatch")
-    if destination == ROOT or ROOT in destination.parents and destination == ROOT / "data":
-        raise ValueError("Unsafe bundle destination")
     for source_rel, target_rel in FILES.items():
         source = ROOT / source_rel
         if not source.is_file():

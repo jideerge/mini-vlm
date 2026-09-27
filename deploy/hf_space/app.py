@@ -117,7 +117,7 @@ CSS = """
 
 
 def build_demo():
-    with gr.Blocks(css=CSS, title="Mini-VLM 实验性图片问答") as demo:
+    with gr.Blocks(title="Mini-VLM 实验性图片问答") as demo:
         gr.HTML("""<div class='hero'><h1>Mini-VLM · 实验性图片问答</h1>
         <p>上传一张图片，选择训练涉及的 VOC 类别与任务，查看模型的原始回答。</p></div>""")
         gr.HTML("""<div class='warning'><strong>实验性结果</strong><br>
@@ -150,4 +150,4 @@ def build_demo():
 demo = build_demo()
 
 if __name__ == "__main__":
-    demo.queue(max_size=10).launch()
+    demo.queue(max_size=10).launch(css=CSS)
