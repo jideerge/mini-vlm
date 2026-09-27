@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 from pathlib import Path
 
-from demo.inference import CHECKPOINT_SHA256, _sha256
-
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DEST = ROOT / "dist" / "hf_space"
+CHECKPOINT_SHA256 = "2a4ce406e54cdb4798b3afa1af3ef2dd7ed59ebd62a7b65b5921e7f155c6d575"
 FILES = {
     "deploy/hf_space/SPACE_README.md": "README.md",
     "deploy/hf_space/requirements.txt": "requirements.txt",
@@ -29,6 +29,14 @@ FILES = {
     "models/vision_encoder.py": "models/vision_encoder.py",
     "training/losses.py": "training/losses.py",
 }
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def build(destination: Path = DEFAULT_DEST) -> Path:
