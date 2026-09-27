@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 
 from huggingface_hub import HfApi, SpaceHardware, get_token
+from huggingface_hub.errors import HfHubHTTPError
 
 from scripts.build_hf_space_bundle import DEFAULT_DEST
 
@@ -21,14 +22,22 @@ def main() -> None:
     api = HfApi()
     account = api.whoami()
     repo_id = f"{account['name']}/{args.name}"
-    api.create_repo(
-        repo_id=repo_id,
-        repo_type="space",
-        space_sdk="gradio",
-        space_hardware=SpaceHardware.ZERO_A10G,
-        private=False,
-        exist_ok=False,
-    )
+    try:
+        api.create_repo(
+            repo_id=repo_id,
+            repo_type="space",
+            space_sdk="gradio",
+            space_hardware=SpaceHardware.ZERO_A10G,
+            private=False,
+            exist_ok=False,
+        )
+    except HfHubHTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 402:
+            raise SystemExit(
+                "Hugging Face rejected ZeroGPU Space creation (402): this account "
+                "needs PRO or free ZeroGPU eligibility. No paid hardware was requested."
+            ) from None
+        raise
     api.upload_folder(folder_path=str(args.bundle), repo_id=repo_id, repo_type="space",
                       commit_message="Publish frozen Mini-VLM demo")
     print(f"Published https://huggingface.co/spaces/{repo_id}")
